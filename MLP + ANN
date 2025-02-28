@@ -1,0 +1,121 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
+from keras.models import Sequential
+from keras.layers import Dense
+
+# Load the dataset
+df = pd.read_csv("diabetes_augmented.csv")
+
+# Data Preprocessing
+X = df.drop('Outcome', axis=1).values
+y = df['Outcome'].values
+
+# Split data for Neural Network
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Scale data
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# MLP with ANN Model
+mlp_model = Sequential()
+mlp_model.add(Dense(units=64, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+mlp_model.add(Dense(units=32, activation='relu'))
+mlp_model.add(Dense(units=16, activation='relu'))
+mlp_model.add(Dense(units=1, activation='sigmoid'))
+
+# Compile Model
+mlp_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# Train model
+history = mlp_model.fit(X_train_scaled, y_train, epochs=100, batch_size=32, validation_split=0.2)
+
+# Evaluate model
+y_test_pred_mlp = (mlp_model.predict(X_test_scaled) > 0.5).astype("int32")
+
+# Print Accuracy and F1 Score
+print("\nMLP Using ANN Test Accuracy:", accuracy_score(y_test, y_test_pred_mlp))
+print("MLP Using ANN Test F1 Score:", f1_score(y_test, y_test_pred_mlp))
+
+# Maximum Accuracy Tracking
+history_dict = history.history
+max_train_accuracy = max(history_dict['accuracy'])
+max_val_accuracy = max(history_dict['val_accuracy'])
+print("Maximum Training Accuracy (MLP with ANN):", max_train_accuracy)
+print("Maximum Validation Accuracy (MLP with ANN):", max_val_accuracy)
+
+# Confusion Matrix for MLP WITH ANN
+print("\nConfusion Matrix (MLP with ANN):\n", confusion_matrix(y_test, y_test_pred_mlp))
+
+# Classification Report
+print("\nClassification Report (MLP with ANN):\n", classification_report(y_test, y_test_pred_mlp))
+
+# --- Plotting Training History for MLP ---
+
+# Plot Training and Validation Accuracy
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('MLP USING ANN Training and Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
+
+# Plot Training and Validation Loss
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('MLP with ANN Training and Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+# Function to preprocess user input
+def preprocess_user_input(user_input):
+    # Convert user input into a DataFrame (ensuring it matches the feature format of the original training data)
+    user_df = pd.DataFrame([user_input])
+    user_df_scaled = scaler.transform(user_df)  # Scale the input data using the same scaler used during training
+    return user_df_scaled
+
+# Function to predict diabetes based on user input
+def predict_diabetes(user_input):
+    user_input_processed = preprocess_user_input(user_input)  # Preprocess the user input
+    prediction = mlp_model.predict(user_input_processed)  # Use the trained MLP model
+    return "The model predicts: Diabetes" if prediction[0][0] > 0.5 else "The model predicts: No Diabetes"
+
+# Function to gather user input
+def get_user_input():
+    print("Please enter the following information:")
+
+    pregnancies = float(input("Number of Pregnancies: "))
+    glucose = float(input("Glucose Level: "))
+    blood_pressure = float(input("Blood Pressure: "))
+    skin_thickness = float(input("Skin Thickness: "))
+    insulin = float(input("Insulin Level: "))
+    bmi = float(input("Body Mass Index (BMI): "))
+    diabetes_pedigree = float(input("Diabetes Pedigree Function: "))
+    age = int(input("Age: "))
+
+    # Organizing the user data into a dictionary
+    user_data = {
+        'Pregnancies': pregnancies,
+        'Glucose': glucose,
+        'BloodPressure': blood_pressure,
+        'SkinThickness': skin_thickness,
+        'Insulin': insulin,
+        'BMI': bmi,
+        'DiabetesPedigreeFunction': diabetes_pedigree,
+        'Age': age
+    }
+
+    return user_data
+
+# Get user input and predict diabetes
+user_input = get_user_input()  # Collect user input
+prediction_result = predict_diabetes(user_input)  # Make a prediction
+print(prediction_result)  # Display the prediction result
